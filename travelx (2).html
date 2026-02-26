@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TravelX — Your Travel Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink: #e8eaf6;
+    --paper: #06060f;
+    --cream: #0d0d1f;
+    --accent: #7c6aff;
+    --accent2: #40c4ff;
+    --gold: #b39ddb;
+    --muted: #8888aa;
+    --card: #0f0f24;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* Star canvas background */
+  #starfield {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* Custom cursor */
+  .cursor {
+    width: 12px; height: 12px;
+    background: var(--accent);
+    border-radius: 50%;
+    position: fixed;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: transform 0.1s, width 0.2s, height 0.2s, background 0.2s;
+    mix-blend-mode: screen;
+  }
+  .cursor-ring {
+    width: 36px; height: 36px;
+    border: 1.5px solid var(--accent);
+    border-radius: 50%;
+    position: fixed;
+    pointer-events: none;
+    z-index: 9998;
+    transform: translate(-50%, -50%);
+    transition: left 0.12s ease-out, top 0.12s ease-out, width 0.3s, height 0.3s;
+  }
+
+  /* Header */
+  header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 48px;
+    background: rgba(6,6,15,0.75);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(124,106,255,0.15);
+  }
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px; letter-spacing: 0.06em;
+    color: var(--ink);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .logo span { color: var(--accent); }
+  nav { display: flex; gap: 32px; }
+  nav a {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: rgba(232,234,246,0.45); text-decoration: none;
+    transition: color 0.2s;
+  }
+  nav a:hover { color: var(--accent); }
+
+  /* Hero */
+  .hero {
+    min-height: 100vh;
+    display: flex; align-items: center;
+    padding: 120px 48px 80px;
+    position: relative; overflow: hidden; z-index: 1;
+  }
+  .hero-bg {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 70% 60% at 75% 40%, rgba(124,106,255,0.18) 0%, transparent 65%),
+      radial-gradient(ellipse 50% 50% at 20% 65%, rgba(64,196,255,0.10) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 40% at 50% 90%, rgba(179,157,219,0.08) 0%, transparent 60%);
+  }
+  .hero-grid {
+    position: absolute; inset: 0;
+    background-image: linear-gradient(rgba(124,106,255,0.06) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(124,106,255,0.06) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: linear-gradient(to bottom, transparent 0%, black 30%, black 70%, transparent 100%);
+  }
+  .hero-content { position: relative; max-width: 700px; }
+  .hero-tag {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--accent2); background: rgba(64,196,255,0.08);
+    padding: 6px 14px; border-radius: 2px;
+    margin-bottom: 28px;
+    border: 1px solid rgba(64,196,255,0.2);
+  }
+  .hero-tag::before { content: '🌌'; }
+  h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(72px, 10vw, 130px);
+    line-height: 0.92;
+    letter-spacing: 0.01em;
+    color: var(--ink);
+    margin-bottom: 28px;
+  }
+  h1 em { color: var(--accent); font-style: normal; text-shadow: 0 0 40px rgba(124,106,255,0.5); }
+  .hero-sub {
+    font-size: 18px; line-height: 1.65;
+    color: var(--muted); font-weight: 300;
+    max-width: 480px; margin-bottom: 44px;
+  }
+  .hero-actions { display: flex; gap: 16px; flex-wrap: wrap; }
+  .btn-primary {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase;
+    background: var(--accent); color: white;
+    padding: 16px 36px; border: none; border-radius: 2px;
+    cursor: none; transition: all 0.2s;
+    position: relative; overflow: hidden;
+    box-shadow: 0 0 24px rgba(124,106,255,0.4);
+  }
+  .btn-primary::after {
+    content: ''; position: absolute; inset: 0;
+    background: var(--accent2);
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+  .btn-primary:hover::after { transform: translateX(0); }
+  .btn-primary span { position: relative; z-index: 1; }
+  .btn-secondary {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase;
+    background: transparent; color: var(--ink);
+    padding: 16px 36px; border: 1.5px solid rgba(124,106,255,0.4); border-radius: 2px;
+    cursor: none; transition: all 0.2s;
+  }
+  .btn-secondary:hover { background: rgba(124,106,255,0.15); border-color: var(--accent); }
+  .hero-float {
+    position: absolute; right: 48px; top: 50%;
+    transform: translateY(-50%);
+    display: flex; flex-direction: column; gap: 12px;
+    animation: float 6s ease-in-out infinite;
+  }
+  @keyframes float { 0%,100%{transform:translateY(-50%) translateX(0)} 50%{transform:translateY(-50%) translateX(-12px)} }
+  .stat-pill {
+    background: rgba(13,13,31,0.9); border-radius: 8px; padding: 16px 24px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.4), 0 0 0 1px rgba(124,106,255,0.15);
+    display: flex; gap: 14px; align-items: center;
+    backdrop-filter: blur(10px);
+  }
+  .stat-pill .num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px; color: var(--accent); line-height: 1;
+    text-shadow: 0 0 16px rgba(124,106,255,0.5);
+  }
+  .stat-pill .label { font-size: 12px; color: var(--muted); line-height: 1.4; }
+  .stat-pill .icon { font-size: 24px; }
+
+  /* Section */
+  section { padding: 100px 48px; position: relative; z-index: 1; }
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 20px;
+  }
+  h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(42px, 5vw, 72px);
+    line-height: 1; letter-spacing: 0.02em;
+    margin-bottom: 16px;
+  }
+
+  /* Destinations */
+  #destinations { background: #08081a; color: var(--paper); }
+  #destinations .section-label { color: var(--accent); }
+  #destinations h2 { color: var(--paper); }
+  .dest-intro { color: rgba(245,240,232,0.6); font-size: 16px; max-width: 500px; margin-bottom: 60px; }
+  .dest-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2px;
+  }
+  .dest-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 32px;
+    cursor: none;
+    transition: all 0.3s;
+    position: relative; overflow: hidden;
+  }
+  .dest-card::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    transform: scaleY(0); transform-origin: bottom;
+    transition: transform 0.4s cubic-bezier(0.16,1,0.3,1);
+    z-index: 0;
+  }
+  .dest-card:hover::before { transform: scaleY(1); }
+  .dest-card * { position: relative; z-index: 1; }
+  .dest-card:hover { color: white; }
+  .dest-emoji { font-size: 40px; margin-bottom: 16px; display: block; }
+  .dest-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px; letter-spacing: 0.04em;
+    margin-bottom: 4px;
+  }
+  .dest-country { font-size: 12px; color: rgba(245,240,232,0.5); margin-bottom: 12px; }
+  .dest-card:hover .dest-country { color: rgba(255,255,255,0.7); }
+  .dest-vibe { font-size: 13px; line-height: 1.5; color: rgba(245,240,232,0.55); }
+  .dest-card:hover .dest-vibe { color: rgba(255,255,255,0.85); }
+  .dest-budget {
+    margin-top: 20px; padding-top: 20px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .dest-card:hover .dest-budget { border-top-color: rgba(255,255,255,0.3); }
+  .dest-budget-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 20px; font-weight: 700;
+  }
+  .dest-budget-label { font-size: 11px; color: rgba(245,240,232,0.4); }
+  .dest-card:hover .dest-budget-label { color: rgba(255,255,255,0.6); }
+  .dest-select-btn {
+    font-family: 'Space Mono', monospace; font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    background: rgba(255,255,255,0.1); border: none;
+    color: var(--paper); padding: 8px 16px; cursor: none;
+    transition: background 0.2s;
+  }
+  .dest-card:hover .dest-select-btn { background: rgba(255,255,255,0.25); }
+
+  /* Planner */
+  #planner { background: var(--cream); }
+  .planner-wrap {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 48px; align-items: start; max-width: 1100px;
+  }
+  .planner-form { background: #0d0d22; padding: 44px; border-radius: 4px; box-shadow: 0 2px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(124,106,255,0.12); }
+  .form-group { margin-bottom: 28px; }
+  label {
+    display: block;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 10px;
+  }
+  select, input[type="number"] {
+    width: 100%; padding: 14px 16px;
+    border: 1.5px solid rgba(124,106,255,0.15); border-radius: 2px;
+    font-family: 'DM Sans', sans-serif; font-size: 15px;
+    background: rgba(255,255,255,0.04); color: var(--ink);
+    cursor: none; transition: border-color 0.2s;
+    appearance: none;
+  }
+  select:focus, input[type="number"]:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(124,106,255,0.12);
+  }
+  select option { background: #0d0d22; }
+  .style-options { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+  .style-opt {
+    border: 1.5px solid rgba(124,106,255,0.15); border-radius: 2px; padding: 14px 10px;
+    text-align: center; cursor: none; transition: all 0.2s;
+  }
+  .style-opt:hover, .style-opt.active {
+    border-color: var(--accent); background: rgba(124,106,255,0.12);
+    box-shadow: 0 0 16px rgba(124,106,255,0.2);
+  }
+  .style-opt .style-icon { font-size: 22px; display: block; margin-bottom: 6px; }
+  .style-opt .style-label { font-size: 11px; color: var(--muted); }
+  .days-wrap { position: relative; }
+  .days-wrap input { padding-right: 60px; }
+  .days-unit {
+    position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+    font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted);
+  }
+  #plan-btn {
+    width: 100%;
+    font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 0.08em;
+    background: linear-gradient(135deg, var(--accent), var(--accent2)); color: white; border: none;
+    padding: 18px; cursor: none; transition: all 0.2s; border-radius: 2px;
+    margin-top: 8px;
+    box-shadow: 0 0 28px rgba(124,106,255,0.4);
+  }
+  #plan-btn:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 0 40px rgba(124,106,255,0.6); }
+
+  /* Result */
+  .planner-result {
+    background: #08081a; color: var(--paper);
+    border-radius: 4px; padding: 44px;
+    min-height: 400px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid rgba(124,106,255,0.1);
+    box-shadow: inset 0 0 60px rgba(124,106,255,0.04);
+  }
+  .result-placeholder {
+    text-align: center; color: rgba(245,240,232,0.25);
+  }
+  .result-placeholder .placeholder-icon { font-size: 56px; display: block; margin-bottom: 16px; }
+  .result-placeholder p {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  .result-content { width: 100%; }
+  .result-header { margin-bottom: 32px; }
+  .result-dest {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 48px; letter-spacing: 0.04em;
+    color: var(--accent); line-height: 1;
+  }
+  .result-meta { font-size: 13px; color: rgba(245,240,232,0.5); margin-top: 6px; }
+  .budget-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 1px; background: rgba(255,255,255,0.06);
+    margin-bottom: 28px; border-radius: 2px; overflow: hidden;
+  }
+  .budget-item {
+    background: rgba(255,255,255,0.03);
+    padding: 18px 20px;
+  }
+  .budget-item .b-icon { font-size: 18px; margin-bottom: 6px; }
+  .budget-item .b-cat { font-size: 10px; font-family: 'Space Mono', monospace; color: rgba(245,240,232,0.4); text-transform: uppercase; letter-spacing: 0.1em; }
+  .budget-item .b-amt { font-family: 'Bebas Neue', sans-serif; font-size: 28px; color: var(--paper); }
+  .budget-total {
+    background: linear-gradient(135deg, var(--accent), var(--accent2)); padding: 20px 24px;
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 28px; border-radius: 2px;
+    box-shadow: 0 0 30px rgba(124,106,255,0.3);
+  }
+  .budget-total .t-label { font-family: 'Space Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; }
+  .budget-total .t-amt { font-family: 'Bebas Neue', sans-serif; font-size: 44px; line-height: 1; }
+  .result-section { margin-bottom: 24px; }
+  .result-section-title {
+    font-family: 'Space Mono', monospace; font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.15em;
+    color: var(--gold); margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .result-section-title::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.08); }
+  .tip-item {
+    font-size: 13px; line-height: 1.6; color: rgba(245,240,232,0.75);
+    padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+    display: flex; gap: 10px;
+  }
+  .tip-item::before { content: '→'; color: var(--accent); flex-shrink: 0; }
+  .gem-item {
+    display: inline-block; margin: 4px; padding: 6px 14px;
+    background: rgba(201,168,76,0.12); border: 1px solid rgba(201,168,76,0.2);
+    border-radius: 2px; font-size: 12px; color: var(--gold);
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* Money Tips */
+  #tips { background: var(--cream); }
+  .tips-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 24px; margin-top: 56px;
+  }
+  .tip-card {
+    background: #0d0d22; padding: 32px; border-radius: 4px;
+    border: 1px solid rgba(124,106,255,0.1);
+    transition: all 0.3s; position: relative;
+  }
+  .tip-card::after {
+    content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2)); transform: scaleX(0);
+    transform-origin: left; transition: transform 0.3s;
+  }
+  .tip-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(124,106,255,0.15), 0 0 0 1px rgba(124,106,255,0.2); }
+  .tip-card:hover::after { transform: scaleX(1); }
+  .tip-cat {
+    font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 0.06em;
+    margin-bottom: 10px;
+  }
+  .tip-text { font-size: 14px; line-height: 1.65; color: var(--muted); }
+
+  /* Packing */
+  #packing { background: #06060f; color: var(--paper); }
+  #packing h2 { color: var(--paper); }
+  #packing .section-label { color: var(--accent); }
+  .packing-intro { color: rgba(232,234,246,0.45); font-size: 15px; max-width: 480px; margin-bottom: 48px; }
+  .pack-tabs { display: flex; gap: 2px; margin-bottom: 36px; flex-wrap: wrap; }
+  .pack-tab {
+    font-family: 'Space Mono', monospace; font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.12em; padding: 10px 20px; background: rgba(124,106,255,0.06);
+    border: 1px solid rgba(124,106,255,0.12); color: rgba(232,234,246,0.4); cursor: none; transition: all 0.2s;
+  }
+  .pack-tab.active, .pack-tab:hover { background: var(--accent); color: white; border-color: var(--accent); box-shadow: 0 0 16px rgba(124,106,255,0.4); }
+  .pack-list { display: flex; flex-direction: column; gap: 12px; }
+  .pack-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 16px 20px; background: rgba(124,106,255,0.04);
+    border: 1px solid rgba(124,106,255,0.08); border-radius: 2px;
+    cursor: none; transition: all 0.2s;
+  }
+  .pack-item:hover { background: rgba(124,106,255,0.08); border-color: rgba(124,106,255,0.2); }
+  .pack-check {
+    width: 20px; height: 20px; border: 1.5px solid rgba(124,106,255,0.3);
+    border-radius: 2px; flex-shrink: 0; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .pack-item.checked .pack-check { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 10px rgba(124,106,255,0.5); }
+  .pack-item.checked .pack-check::after { content: '✓'; font-size: 12px; color: white; }
+  .pack-item.checked span { text-decoration: line-through; color: rgba(232,234,246,0.25); }
+  .pack-item span { font-size: 14px; color: rgba(232,234,246,0.75); }
+
+  /* Footer */
+  footer {
+    background: #04040c; color: rgba(232,234,246,0.3);
+    padding: 48px; text-align: center;
+    border-top: 1px solid rgba(124,106,255,0.1);
+  }
+  .footer-logo {
+    font-family: 'Bebas Neue', sans-serif; font-size: 36px; letter-spacing: 0.06em;
+    color: var(--paper); margin-bottom: 12px;
+  }
+  .footer-logo span { color: var(--accent); }
+  footer p { font-size: 13px; }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .fade-up { animation: fadeUp 0.7s ease forwards; }
+  .fade-up-2 { animation: fadeUp 0.7s 0.15s ease both; }
+  .fade-up-3 { animation: fadeUp 0.7s 0.3s ease both; }
+  .fade-up-4 { animation: fadeUp 0.7s 0.45s ease both; }
+
+  /* Notification */
+  .toast {
+    position: fixed; bottom: 32px; right: 32px; z-index: 1000;
+    background: var(--ink); color: var(--paper);
+    padding: 14px 24px; border-radius: 4px; font-size: 13px;
+    border-left: 3px solid var(--accent);
+    transform: translateX(120%); transition: transform 0.4s cubic-bezier(0.16,1,0.3,1);
+    font-family: 'Space Mono', monospace;
+  }
+  .toast.show { transform: translateX(0); }
+
+  @media (max-width: 900px) {
+    header { padding: 16px 24px; }
+    nav { display: none; }
+    section { padding: 72px 24px; }
+    .hero { padding: 100px 24px 60px; }
+    .hero-float { display: none; }
+    .planner-wrap { grid-template-columns: 1fr; }
+    h1 { font-size: 60px; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="starfield"></canvas>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<div class="toast" id="toast"></div>
+
+<header>
+  <div class="logo">Travel<span>X</span></div>
+  <nav>
+    <a href="#destinations">Destinations</a>
+    <a href="#planner">Plan Trip</a>
+    <a href="#tips">Save Money</a>
+    <a href="#packing">Packing</a>
+  </nav>
+</header>
+
+<!-- HERO -->
+<section class="hero" id="home">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-content">
+    <div class="hero-tag fade-up">Student-Friendly Travel</div>
+    <h1 class="fade-up-2">YOUR<br><em>WORLD</em><br>AWAITS</h1>
+    <p class="hero-sub fade-up-3">Smart budget planning for student explorers. Real destinations, real prices — no illusions, just adventure.</p>
+    <div class="hero-actions fade-up-4">
+      <button class="btn-primary" onclick="document.getElementById('planner').scrollIntoView({behavior:'smooth'})">
+        <span>Plan My Trip →</span>
+      </button>
+      <button class="btn-secondary" onclick="document.getElementById('destinations').scrollIntoView({behavior:'smooth'})">
+        Browse Destinations
+      </button>
+    </div>
+  </div>
+  <div class="hero-float">
+    <div class="stat-pill">
+      <span class="icon">✈️</span>
+      <div>
+        <div class="num">5</div>
+        <div class="label">Top Student<br>Destinations</div>
+      </div>
+    </div>
+    <div class="stat-pill">
+      <span class="icon">💵</span>
+      <div>
+        <div class="num">$8</div>
+        <div class="label">Min. budget<br>per day</div>
+      </div>
+    </div>
+    <div class="stat-pill">
+      <span class="icon">🗺️</span>
+      <div>
+        <div class="num">∞</div>
+        <div class="label">Hidden gems<br>discovered</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DESTINATIONS -->
+<section id="destinations">
+  <div class="section-label">Where to go</div>
+  <h2>PICK YOUR<br>NEXT ADVENTURE</h2>
+  <p class="dest-intro">Five student-tested destinations with real budget breakdowns and insider knowledge.</p>
+  <div class="dest-grid" id="destGrid"></div>
+</section>
+
+<!-- PLANNER -->
+<section id="planner">
+  <div class="section-label">Build your budget</div>
+  <h2>PLAN YOUR TRIP</h2>
+  <div class="planner-wrap" style="margin-top:52px">
+    <div class="planner-form">
+      <div class="form-group">
+        <label>Destination</label>
+        <select id="destSelect">
+          <option value="">— Select a city —</option>
+          <option value="paris">🗼 Paris, France</option>
+          <option value="tokyo">🗾 Tokyo, Japan</option>
+          <option value="barcelona">🏖️ Barcelona, Spain</option>
+          <option value="bangkok">🛕 Bangkok, Thailand</option>
+          <option value="lisbon">🌊 Lisbon, Portugal</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Duration</label>
+        <div class="days-wrap">
+          <input type="number" id="daysInput" min="1" max="60" placeholder="7" value="7">
+          <span class="days-unit">days</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Travel Style</label>
+        <div class="style-options">
+          <div class="style-opt active" data-style="budget backpacker" onclick="selectStyle(this)">
+            <span class="style-icon">🎒</span>
+            <div class="style-label">Budget</div>
+          </div>
+          <div class="style-opt" data-style="balanced" onclick="selectStyle(this)">
+            <span class="style-icon">⚖️</span>
+            <div class="style-label">Balanced</div>
+          </div>
+          <div class="style-opt" data-style="comfort seeker" onclick="selectStyle(this)">
+            <span class="style-icon">🌟</span>
+            <div class="style-label">Comfort</div>
+          </div>
+        </div>
+      </div>
+      <button id="plan-btn" onclick="generatePlan()">GENERATE MY PLAN →</button>
+    </div>
+    <div class="planner-result" id="planResult">
+      <div class="result-placeholder">
+        <span class="placeholder-icon">🗺️</span>
+        <p>Your plan will appear here</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MONEY TIPS -->
+<section id="tips">
+  <div class="section-label">Stretch your budget</div>
+  <h2>UNIVERSAL<br>MONEY TIPS</h2>
+  <div class="tips-grid" id="tipsGrid"></div>
+</section>
+
+<!-- PACKING -->
+<section id="packing">
+  <div class="section-label">Don't forget</div>
+  <h2>PACKING<br>CHECKLIST</h2>
+  <p class="packing-intro">Tap items to check them off. Filter by region or stick to the essentials.</p>
+  <div class="pack-tabs" id="packTabs">
+    <button class="pack-tab active" data-region="general" onclick="switchPack(this)">General</button>
+    <button class="pack-tab" data-region="europe" onclick="switchPack(this)">Europe</button>
+    <button class="pack-tab" data-region="asia" onclick="switchPack(this)">Asia</button>
+    <button class="pack-tab" data-region="beach" onclick="switchPack(this)">Beach</button>
+  </div>
+  <div class="pack-list" id="packList"></div>
+</section>
+
+<footer>
+  <div class="footer-logo">Travel<span>X</span></div>
+  <p>Your broke-but-adventurous companion. The world is big — go see it. ✈️</p>
+</footer>
+
+<script>
+// ── STARFIELD ──
+(function() {
+  const canvas = document.getElementById('starfield');
+  const ctx = canvas.getContext('2d');
+  let W, H, stars = [], shootingStars = [];
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = document.body.scrollHeight;
+  }
+
+  function initStars() {
+    stars = [];
+    const count = Math.floor((W * H) / 4000);
+    for (let i = 0; i < count; i++) {
+      stars.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        r: Math.random() * 1.4 + 0.2,
+        alpha: Math.random() * 0.7 + 0.2,
+        twinkleSpeed: Math.random() * 0.02 + 0.005,
+        twinklePhase: Math.random() * Math.PI * 2,
+        color: Math.random() < 0.15 ? '#b39ddb' : Math.random() < 0.1 ? '#40c4ff' : '#e8eaf6'
+      });
+    }
+  }
+
+  function addShootingStar() {
+    if (Math.random() > 0.003) return;
+    shootingStars.push({
+      x: Math.random() * W,
+      y: Math.random() * H * 0.4,
+      len: Math.random() * 120 + 60,
+      speed: Math.random() * 6 + 4,
+      alpha: 1,
+      angle: Math.PI / 4 + (Math.random() - 0.5) * 0.3,
+      life: 1
+    });
+  }
+
+  let t = 0;
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    // Nebula clouds
+    const nb = [
+      { x: W*0.75, y: H*0.1, r: 320, c: 'rgba(124,106,255,0.055)' },
+      { x: W*0.15, y: H*0.25, r: 250, c: 'rgba(64,196,255,0.04)' },
+      { x: W*0.5,  y: H*0.5,  r: 400, c: 'rgba(179,157,219,0.03)' },
+    ];
+    nb.forEach(n => {
+      const g = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r);
+      g.addColorStop(0, n.c);
+      g.addColorStop(1, 'transparent');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.r, 0, Math.PI*2);
+      ctx.fill();
+    });
+
+    // Stars
+    stars.forEach(s => {
+      const tw = Math.sin(t * s.twinkleSpeed + s.twinklePhase) * 0.3 + 0.7;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+      ctx.fillStyle = s.color;
+      ctx.globalAlpha = s.alpha * tw;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    });
+
+    // Shooting stars
+    addShootingStar();
+    shootingStars = shootingStars.filter(s => s.life > 0);
+    shootingStars.forEach(s => {
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.rotate(s.angle);
+      const g = ctx.createLinearGradient(-s.len, 0, 0, 0);
+      g.addColorStop(0, 'transparent');
+      g.addColorStop(1, `rgba(255,255,255,${s.life * 0.9})`);
+      ctx.strokeStyle = g;
+      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = s.alpha;
+      ctx.beginPath();
+      ctx.moveTo(-s.len, 0);
+      ctx.lineTo(0, 0);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.restore();
+      s.x += Math.cos(s.angle) * s.speed;
+      s.y += Math.sin(s.angle) * s.speed;
+      s.life -= 0.018;
+      s.alpha = s.life;
+    });
+
+    t++;
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', () => { resize(); initStars(); });
+  // Re-size after layout settles
+  setTimeout(() => { resize(); initStars(); draw(); }, 100);
+})();
+</script>
+
+<script>
+// ── DATA ──
+const DB = {
+  paris: {
+    country: "France", emoji: "🗼",
+    vibe: "Romantic, artsy, café culture",
+    budget: { hostel: 45, food: 25, transport: 10, activities: 15 },
+    tips: [
+      "Get the Museum Pass — it covers the Louvre AND saves you €€.",
+      "Eat a baguette sandwich from a boulangerie instead of restaurants.",
+      "The Eiffel Tower at night is free to admire from Trocadéro.",
+      "Many museums are FREE on the first Sunday of each month!"
+    ],
+    gems: ["Canal Saint-Martin", "Montmartre staircases", "Palais Royal gardens"]
+  },
+  tokyo: {
+    country: "Japan", emoji: "🗾",
+    vibe: "Futuristic, food heaven, anime & culture",
+    budget: { hostel: 35, food: 20, transport: 12, activities: 18 },
+    tips: [
+      "Get a Suica card on day 1 — works on trains and convenience stores.",
+      "7-Eleven & FamilyMart have restaurant-quality food for ¥500. Seriously.",
+      "Harajuku on a Sunday is free entertainment for hours.",
+      "JR Pass is only worth it if you're leaving Tokyo frequently."
+    ],
+    gems: ["Shimokitazawa", "Yanaka neighborhood", "Inokashira Park"]
+  },
+  barcelona: {
+    country: "Spain", emoji: "🏖️",
+    vibe: "Beach, tapas, Gaudí, nightlife",
+    budget: { hostel: 30, food: 20, transport: 8, activities: 12 },
+    tips: [
+      "La Boqueria is touristy — eat at Mercat de l'Abaceria instead.",
+      "Many Gaudí buildings offer free entry on certain evenings.",
+      "Bike rental is cheap and the city is surprisingly flat.",
+      "Tapas bars near the university area are half the tourist price."
+    ],
+    gems: ["Bunkers del Carmel viewpoint", "El Born neighborhood", "Barceloneta at sunset"]
+  },
+  bangkok: {
+    country: "Thailand", emoji: "🛕",
+    vibe: "Street food, temples, chaos (in the best way)",
+    budget: { hostel: 12, food: 8, transport: 5, activities: 10 },
+    tips: [
+      "Take the BTS Skytrain — faster than tuk-tuks with honest pricing.",
+      "Street food from carts is safer AND tastier than tourist restaurants.",
+      "Dress modestly near temples — carry a scarf or they'll turn you away.",
+      "Negotiate everything at markets except 7-Eleven."
+    ],
+    gems: ["Chinatown at night", "Chatuchak Weekend Market", "Khlong Lat Mayom floating market"]
+  },
+  lisbon: {
+    country: "Portugal", emoji: "🌊",
+    vibe: "Laid-back, stunning views, cheap & beautiful",
+    budget: { hostel: 25, food: 15, transport: 7, activities: 10 },
+    tips: [
+      "Lisbon is hilly — wear good shoes or regret it immediately.",
+      "Pastel de nata from a local bakery: €1.20. Tourist area: €3.50. Same pastry.",
+      "Tram 28 is a tourist trap. Take the metro and walk.",
+      "Student discounts are everywhere — always carry your student ID."
+    ],
+    gems: ["LX Factory on weekends", "Mouraria neighborhood", "Belém at golden hour"]
+  }
+};
+
+const PACKING = {
+  general: ["Universal power adapter 🔌","Microfiber travel towel","Reusable water bottle","Offline maps downloaded (Maps.me)","Photocopies of all documents","Small first aid kit"],
+  europe: ["Schengen documents if needed","Rail pass (if multi-city)","Warm layer (even in summer)","Student ID card"],
+  asia: ["Stomach meds (just in case 😅)","Mosquito repellent","Cash in local currency from day 1","Translation app downloaded offline"],
+  beach: ["Reef-safe sunscreen","Flip flops","Dry bag for electronics","Rash guard for water sports"]
+};
+
+const TIPS = [
+  { cat: "✈️ Flights", text: "Use Google Flights — set price alerts, fly midweek, book 6-8 weeks out for best prices." },
+  { cat: "🏠 Accommodation", text: "Hostel dorms beat Airbnb for solo travelers. Use Hostelworld and read recent reviews." },
+  { cat: "🍽️ Food", text: "Lunch menus ('menu del día') offer the best value in most countries — often 3 courses." },
+  { cat: "🎫 Activities", text: "Always ask for student discounts. Many attractions have free days or evening hours." },
+  { cat: "💳 Money", text: "Get a Revolut or Wise card — zero foreign transaction fees. A true game-changer." },
+  { cat: "📱 Data & SIM", text: "Buy a local SIM on arrival — way cheaper than roaming. €5-10 covers a full week." },
+  { cat: "🚌 Transport", text: "Night buses and trains let you save on accommodation AND travel at the same time." },
+  { cat: "🛡️ Insurance", text: "Don't skip it. SafetyWing is built for students at ~€1.50/day. It's not optional." },
+];
+
+const MULTIPLIERS = { "budget backpacker": 0.85, "balanced": 1.0, "comfort seeker": 1.35 };
+
+let selectedStyle = "budget backpacker";
+
+// ── CURSOR ──
+const cursor = document.getElementById('cursor');
+const ring = document.getElementById('cursorRing');
+document.addEventListener('mousemove', e => {
+  cursor.style.left = e.clientX + 'px';
+  cursor.style.top = e.clientY + 'px';
+  ring.style.left = e.clientX + 'px';
+  ring.style.top = e.clientY + 'px';
+});
+document.querySelectorAll('button, a, select, input, .dest-card, .tip-card, .pack-item, .style-opt, .pack-tab').forEach(el => {
+  el.addEventListener('mouseenter', () => { cursor.style.width='18px'; cursor.style.height='18px'; ring.style.width='52px'; ring.style.height='52px'; });
+  el.addEventListener('mouseleave', () => { cursor.style.width='12px'; cursor.style.height='12px'; ring.style.width='36px'; ring.style.height='36px'; });
+});
+
+// ── TOAST ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── DESTINATIONS ──
+function renderDests() {
+  const grid = document.getElementById('destGrid');
+  for (const [key, d] of Object.entries(DB)) {
+    const daily = Object.values(d.budget).reduce((a,b) => a+b, 0);
+    const card = document.createElement('div');
+    card.className = 'dest-card';
+    card.innerHTML = `
+      <span class="dest-emoji">${d.emoji}</span>
+      <div class="dest-name">${key.charAt(0).toUpperCase()+key.slice(1)}</div>
+      <div class="dest-country">${d.country}</div>
+      <div class="dest-vibe">${d.vibe}</div>
+      <div class="dest-budget">
+        <div>
+          <div class="dest-budget-num">~$${daily}/day</div>
+          <div class="dest-budget-label">estimated budget</div>
+        </div>
+        <button class="dest-select-btn" onclick="selectDest('${key}')">Plan This →</button>
+      </div>`;
+    grid.appendChild(card);
+  }
+}
+
+function selectDest(key) {
+  document.getElementById('destSelect').value = key;
+  document.getElementById('planner').scrollIntoView({ behavior: 'smooth' });
+  showToast(`${key.charAt(0).toUpperCase()+key.slice(1)} selected! Fill in the details below.`);
+}
+
+// ── PLANNER ──
+function selectStyle(el) {
+  document.querySelectorAll('.style-opt').forEach(o => o.classList.remove('active'));
+  el.classList.add('active');
+  selectedStyle = el.dataset.style;
+}
+
+function generatePlan() {
+  const dest = document.getElementById('destSelect').value;
+  const days = parseInt(document.getElementById('daysInput').value) || 7;
+
+  if (!dest) { showToast('⚠️ Please select a destination first!'); return; }
+  if (days < 1 || days > 60) { showToast('⚠️ Days must be between 1 and 60.'); return; }
+
+  const d = DB[dest];
+  const m = MULTIPLIERS[selectedStyle];
+  const b = d.budget;
+
+  const hostel = Math.round(b.hostel * days * m);
+  const food = Math.round(b.food * days * m);
+  const transport = Math.round(b.transport * days * m);
+  const activities = Math.round(b.activities * days * m);
+  const total = hostel + food + transport + activities;
+
+  const result = document.getElementById('planResult');
+  result.innerHTML = `<div class="result-content">
+    <div class="result-header">
+      <div class="result-dest">${dest.toUpperCase()} ${d.emoji}</div>
+      <div class="result-meta">${days} days · ${selectedStyle} · ${d.country}</div>
+    </div>
+    <div class="budget-grid">
+      <div class="budget-item"><div class="b-icon">🏠</div><div class="b-cat">Accommodation</div><div class="b-amt">$${hostel}</div></div>
+      <div class="budget-item"><div class="b-icon">🍜</div><div class="b-cat">Food</div><div class="b-amt">$${food}</div></div>
+      <div class="budget-item"><div class="b-icon">🚌</div><div class="b-cat">Transport</div><div class="b-amt">$${transport}</div></div>
+      <div class="budget-item"><div class="b-icon">🎭</div><div class="b-cat">Activities</div><div class="b-amt">$${activities}</div></div>
+    </div>
+    <div class="budget-total">
+      <div><div class="t-label">Total Estimate</div><div style="font-size:11px;opacity:0.7;font-family:monospace">Flights not included</div></div>
+      <div class="t-amt">$${total}</div>
+    </div>
+    <div class="result-section">
+      <div class="result-section-title">✦ Local Student Tips</div>
+      ${d.tips.map(t => `<div class="tip-item">${t}</div>`).join('')}
+    </div>
+    <div class="result-section">
+      <div class="result-section-title">💎 Hidden Gems</div>
+      <div>${d.gems.map(g => `<span class="gem-item">${g}</span>`).join('')}</div>
+    </div>
+    <p style="font-size:11px;color:rgba(245,240,232,0.3);font-family:'Space Mono',monospace;margin-top:20px">
+      Pro tip: Add ~15% buffer for the 'oops' moments 😅
+    </p>
+  </div>`;
+
+  showToast(`Plan ready for ${dest.charAt(0).toUpperCase()+dest.slice(1)}!`);
+}
+
+// ── MONEY TIPS ──
+function renderTips() {
+  const grid = document.getElementById('tipsGrid');
+  TIPS.forEach(t => {
+    const c = document.createElement('div');
+    c.className = 'tip-card';
+    c.innerHTML = `<div class="tip-cat">${t.cat}</div><p class="tip-text">${t.text}</p>`;
+    grid.appendChild(c);
+  });
+}
+
+// ── PACKING ──
+let checkedItems = new Set();
+
+function switchPack(btn) {
+  document.querySelectorAll('.pack-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  renderPack(btn.dataset.region);
+}
+
+function renderPack(region) {
+  const list = document.getElementById('packList');
+  list.innerHTML = '';
+  (PACKING[region] || []).forEach((item, i) => {
+    const id = `${region}-${i}`;
+    const el = document.createElement('div');
+    el.className = 'pack-item' + (checkedItems.has(id) ? ' checked' : '');
+    el.innerHTML = `<div class="pack-check"></div><span>${item}</span>`;
+    el.onclick = () => {
+      if (checkedItems.has(id)) checkedItems.delete(id);
+      else checkedItems.add(id);
+      el.classList.toggle('checked');
+    };
+    list.appendChild(el);
+  });
+}
+
+// ── INIT ──
+renderDests();
+renderTips();
+renderPack('general');
+
+// Intersection observer for subtle animations
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.style.opacity = '1';
+      e.target.style.transform = 'translateY(0)';
+    }
+  });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.dest-card, .tip-card').forEach(el => {
+  el.style.opacity = '0';
+  el.style.transform = 'translateY(20px)';
+  el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+  io.observe(el);
+});
+</script>
+</body>
+</html>
